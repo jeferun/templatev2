@@ -1,31 +1,39 @@
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addToCart } from '../models/productSlice';
-import { toast } from 'sonner'; // Para feedback visual elegante
+import { fetchProductsAsync, addToCart } from '../models/productSlice';
+import { toast } from 'sonner';
 
 export const useProductViewModel = () => {
   const dispatch = useDispatch();
 
-  // Selectores: Extraer datos del store
+  // Extraemos todo del Store
   const products = useSelector((state) => state.products.list);
+  const status = useSelector((state) => state.products.status);
+  const error = useSelector((state) => state.products.error);
   const cart = useSelector((state) => state.products.cart);
 
-  // Lógica derivada (Computed properties)
   const cartTotalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  // Funciones (Actions)
+  useEffect(() => {
+    // Solo disparamos la petición si el store está vacío (evita peticiones innecesarias)
+    if (status === 'idle') {
+      dispatch(fetchProductsAsync());
+    }
+  }, [status, dispatch]);
+
   const handleAddToCart = (product) => {
     if (product.stock <= 0) {
-      toast.error('¡Lo sentimos! No hay stock disponible.');
+      toast.error('Sin stock disponible');
       return;
     }
-
     dispatch(addToCart(product));
-    toast.success(`Agregaste ${product.name} al carrito`);
+    toast.success(`${product.name} añadido al carrito`);
   };
 
   return {
     products,
-    cart,
+    isLoading: status === 'loading',
+    error,
     cartTotalItems,
     handleAddToCart,
   };
